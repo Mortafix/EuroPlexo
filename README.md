@@ -12,6 +12,6 @@ europlexo manage
 
 # Usage
 ```bash
-europlexo manage  # add and remove anime, other parameters configuration
+europlexo manage  # manage your tv series and configure other parameters
 europlexo run	# download every available episodes
 ```
