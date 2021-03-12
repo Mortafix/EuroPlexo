@@ -52,10 +52,12 @@ def episodes_to_download(folder, page, mode):
     if mode == "full":
         eps_to_download = [ep for ep in online_eps if ep not in downloaded_eps]
     elif mode == "new":
-        eps_to_download = [ep for ep in online_eps if ep > max(downloaded_eps)]
+        last_downloaded = max(downloaded_eps) if downloaded_eps else (0, 0)
+        eps_to_download = [ep for ep in online_eps if ep > last_downloaded]
     elif mode == "last":
+        last_season_online = max(online_eps)[0] if online_eps else 0
         last_online_season = [
-            (se, ep) for se, ep in online_eps if se == max(online_eps)[0]
+            (se, ep) for se, ep in online_eps if se == last_season_online
         ]
         eps_to_download = [ep for ep in last_online_season if ep not in downloaded_eps]
     return eps_to_download
@@ -101,11 +103,24 @@ def download_video(url, name, filename):
 def download(action):
     serie_list = [list(serie.values()) for serie in CONFIG.get("serie")]
     for name, url, folder, lang, mode in serie_list:
+        SPINNER.start(f"Scanning {paint(name,Color.BLUE)}")
         eurostreaming_url = path.join(get_eurostreaming_site(), url)
         page = LinkFinder(eurostreaming_url, sub=lang == "eng")
         eps_to_download = episodes_to_download(folder, page, mode)
         for se, ep in eps_to_download:
-            link = page.get_direct_links(se, ep)
+            SPINNER.start(
+                f"Finding link for {paint(name,Color.BLUE)} "
+                f"{paint(f'{se}x{ep}',Color.MAGENTA)}"
+            )
+            try:
+                link = page.get_direct_links(se, ep)
+            except ValueError:
+                SPINNER.fail(
+                    f"Fail to get link for {paint(name,Color.BLUE)} "
+                    f"{paint(f'{se}x{ep}',Color.MAGENTA)}"
+                )
+                send_telegram_log(name, se, ep, success=False)
+                break
             if action == "run":
                 basepath = path.join(CONFIG.get("path"), folder, f"Stagione {se}")
                 if not path.exists(basepath):
@@ -119,8 +134,7 @@ def download(action):
                 )
                 try:
                     download_video(link, name, filename)
-                except Exception as e:
-                    print(e)
+                except Exception:
                     SPINNER.fail(
                         f"Fail to download {paint(name,Color.BLUE)} "
                         f"{paint(f'{se}x{ep}',Color.MAGENTA)}"
