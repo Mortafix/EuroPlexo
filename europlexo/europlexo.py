@@ -2,7 +2,6 @@ from argparse import ArgumentParser
 from datetime import datetime
 from os import makedirs, path, walk
 from re import search
-from subprocess import PIPE, STDOUT, Popen
 
 from colorifix.colorifix import Color, paint
 from emoji import emojize
@@ -13,6 +12,7 @@ from pymortafix.utils import multisub
 from requests import get
 from requests.exceptions import ConnectionError, MissingSchema
 from telegram import Bot
+from youtube_dl import YoutubeDL
 
 CONFIG = get_config()
 SPINNER = Halo()
@@ -86,18 +86,16 @@ def send_telegram_log(name, season, episode, success=True):
 
 
 def download_video(url, name, filename):
-    popen = Popen(
-        f"{CONFIG.get('youtube-dl-path')} {url} -o '{filename}' --no-check-certificate",
-        shell=True,
-        stdout=PIPE,
-        stderr=STDOUT,
+    with YoutubeDL({"outtmpl": filename, "quiet": True, "no_warnings": True}) as ydl:
+        ydl.download([url])
+
+
+def spinner(func, action, serie, season, episode):
+    func(
+        paint(f"{action} ", Color.WHITE)
+        + paint(f"{serie} ", Color.BLUE)
+        + paint(f"{season}x{episode}", Color.MAGENTA)
     )
-    while True:
-        next_line = popen.stdout.readline()
-        line = next_line.rstrip().decode("utf8")
-        if line == "" and popen.poll() is not None:
-            break
-    return filename
 
 
 def download(action):
@@ -108,19 +106,14 @@ def download(action):
         page = LinkFinder(eurostreaming_url, sub=lang == "eng")
         eps_to_download = episodes_to_download(folder, page, mode)
         for se, ep in eps_to_download:
-            SPINNER.start(
-                f"Finding link for {paint(name,Color.BLUE)} "
-                f"{paint(f'{se}x{ep}',Color.MAGENTA)}"
-            )
+            spinner(SPINNER.start, "Finding link for", name, se, ep)
             try:
                 link = page.get_direct_links(se, ep)
             except ValueError:
-                SPINNER.fail(
-                    f"Fail to get link for {paint(name,Color.BLUE)} "
-                    f"{paint(f'{se}x{ep}',Color.MAGENTA)}"
-                )
-                send_telegram_log(name, se, ep, success=False)
-                break
+                spinner(SPINNER.fail, "Fail to get the link for", name, se, ep)
+                if action != "test":
+                    send_telegram_log(name, se, ep, success=False)
+                continue
             if action == "run":
                 basepath = path.join(CONFIG.get("path"), folder, f"Stagione {se}")
                 if not path.exists(basepath):
@@ -128,29 +121,17 @@ def download(action):
                 filename = path.join(
                     basepath, f"{sanitize_name(name)}_s{int(se):02d}e{ep:02d}.mp4"
                 )
-                SPINNER.start(
-                    f"Downloading {paint(name,Color.BLUE)} "
-                    f"{paint(f'{se}x{ep}',Color.MAGENTA)}"
-                )
+                spinner(SPINNER.start, "Downloading", name, se, ep)
                 try:
                     download_video(link, name, filename)
                 except Exception:
-                    SPINNER.fail(
-                        f"Fail to download {paint(name,Color.BLUE)} "
-                        f"{paint(f'{se}x{ep}',Color.MAGENTA)}"
-                    )
+                    spinner(SPINNER.fail, "Fail to download", name, se, ep)
                     send_telegram_log(name, se, ep, success=False)
-                    break
-                SPINNER.succeed(
-                    f"Downloaded {paint(name,Color.BLUE)} "
-                    f"{paint(f'{se}x{ep}',Color.MAGENTA)}"
-                )
+                    continue
+                spinner(SPINNER.succeed, "Downloaded", name, se, ep)
                 send_telegram_log(name, se, ep)
             elif action == "test":
-                SPINNER.info(
-                    f"Found {paint(name, Color.BLUE)} "
-                    + paint(f"{se}x{ep}", Color.MAGENTA)
-                )
+                spinner(SPINNER.info, "Found", name, se, ep)
 
 
 def argparsing():

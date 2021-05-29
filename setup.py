@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="europlexo",
-    version="2.0.1",
+    version="2.1.0",
     author="Moris Doratiotto",
     author_email="moris.doratiotto@gmail.com",
     description="A python module to download tv series from magic",
@@ -18,10 +18,9 @@ setuptools.setup(
         "bs4",
         "halo",
         "pymortafix",
-        "halo",
-        "argparse",
         "python-telegram-bot",
         "cloudscraper",
+        "youtube-dl",
     ],
     classifiers=[
         "Programming Language :: Python :: 3.8",
