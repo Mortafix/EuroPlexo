@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="europlexo",
-    version="2.2.0",
+    version="2.2.1",
     author="Moris Doratiotto",
     author_email="moris.doratiotto@gmail.com",
     description="A python module to download tv series from magic",
@@ -40,6 +40,7 @@ setuptools.setup(
             "config.json",
             "dispatcher/deltabit.py",
             "dispatcher/turbovid.py",
+            "dispatcher/maxstream.py",
         ]
     },
     entry_points={"console_scripts": ["europlexo=europlexo.europlexo:main"]},
