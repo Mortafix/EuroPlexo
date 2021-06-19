@@ -21,6 +21,7 @@ setuptools.setup(
         "python-telegram-bot",
         "cloudscraper",
         "youtube-dl",
+        "jsbeautifier",
     ],
     classifiers=[
         "Programming Language :: Python :: 3.8",

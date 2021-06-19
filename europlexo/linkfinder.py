@@ -3,6 +3,7 @@ from re import findall, search
 import requests
 from bs4 import BeautifulSoup as bs
 from europlexo.dispatcher.deltabit import get_DeltaBit_download_link
+from europlexo.dispatcher.maxstream import get_MaxStream_download_link
 from europlexo.dispatcher.turbovid import get_TurboVid_download_link
 
 
@@ -72,6 +73,7 @@ class LinkFinder:
         sites = {
             "DeltaBit": get_DeltaBit_download_link,
             "Turbovid": get_TurboVid_download_link,
+            "MaxStream": get_MaxStream_download_link,
         }
         return sites[site](link) if site in sites else None
 
