@@ -61,12 +61,6 @@ def add_telegram_config(bot_token, chat_id):
     save_config(config)
 
 
-def add_youtube_dl(ytd_path):
-    config = get_config()
-    config["youtube-dl-path"] = ytd_path
-    save_config(config)
-
-
 def add_eurostreaming_site(es_url):
     config = get_config()
     config["eurostreaming"] = es_url
@@ -110,7 +104,6 @@ def pprint_actions(mode=None):
             "r": "restore",
             "p": "path",
             "t": "telegram",
-            "y": "youtube-dl",
             "e": "eurostreaming",
             "b": "back",
         }
@@ -143,7 +136,7 @@ def pprint_query(query_list, selected):
 
 def pprint_settings():
     config = get_config()
-    labels = ("Eurostreaming", "Current path", "Backup", "Telegram", "Youtube-dl")
+    labels = ("Eurostreaming", "Current path", "Backup", "Telegram")
     eurostreaming_url = f"[#blue]{config.get('eurostreaming')}"
     path_str = f"[#blue]{config.get('path')}"
     backup_str = f"[#blue]{get_last_backup()}"
@@ -152,8 +145,7 @@ def pprint_settings():
         f"[/@ #blue]{config.get('telegram-chat-id')}"
     )
     telegram_str = config.get("telegram-bot-token") and telegram_str or ""
-    youtube_dl_str = f"[#blue]{config.get('youtube-dl-path')}"
-    values = (eurostreaming_url, path_str, backup_str, telegram_str, youtube_dl_str)
+    values = (eurostreaming_url, path_str, backup_str, telegram_str)
     return "\n".join(
         paint(f"[@bold]{lab}[/]: {val}") for lab, val in zip(labels, values)
     )
@@ -184,10 +176,6 @@ def is_bot_valid(token):
         return True
     except InvalidToken:
         return False
-
-
-def is_yt_download_valid(ytd_path):
-    return search(r"youtube-dl$", ytd_path) and path.exists(ytd_path)
 
 
 def is_eurostreaming_valid(es_url):
@@ -223,7 +211,7 @@ def manage(eurostreaming_url):
                 print(pprint_settings())
                 print(pprint_actions(mode="settings"))
                 e_k = direct_input(choices=("u", "r", "p", "t", "y", "e", "b"))
-                erase(7)
+                erase(6)
                 if e_k == "p":
                     base = paint("[@bold]Path[/]: ")
                     new_path = strict_input(
@@ -263,17 +251,6 @@ def manage(eurostreaming_url):
                         flush=True,
                     )
                     add_telegram_config(telegram_bot_token, telegram_chat_id)
-                elif e_k == "y":
-                    base = paint("[@bold]Youtube-dl path[/]: ")
-                    youtube_dl_path = strict_input(
-                        base,
-                        wrong_text=paint(
-                            f"[#red]Wrong path, MUST include 'Youtube-dl'![/] {base}"
-                        ),
-                        check=is_yt_download_valid,
-                        flush=True,
-                    )
-                    add_youtube_dl(youtube_dl_path)
                 elif e_k == "e":
                     base = paint("[@bold]Eurostreaming site[/]: ")
                     eurostreaming_url = strict_input(
