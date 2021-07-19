@@ -3,7 +3,7 @@ from datetime import datetime
 from os import makedirs, path, walk
 from re import search
 
-from colorifix.colorifix import Color, paint
+from colorifix.colorifix import paint, ppaint
 from emoji import emojize
 from europlexo.linkfinder import LinkFinder
 from europlexo.manage import get_config, manage
@@ -86,22 +86,25 @@ def send_telegram_log(name, season, episode, success=True):
 
 
 def download_video(url, name, filename):
-    with YoutubeDL({"outtmpl": filename, "quiet": True, "no_warnings": True}) as ydl:
+    with YoutubeDL(
+        {
+            "outtmpl": filename,
+            "quiet": True,
+            "no_warnings": True,
+            "nocheckcertificate": True,
+        }
+    ) as ydl:
         ydl.download([url])
 
 
 def spinner(func, action, serie, season, episode):
-    func(
-        paint(f"{action} ", Color.WHITE)
-        + paint(f"{serie} ", Color.BLUE)
-        + paint(f"{season}x{episode}", Color.MAGENTA)
-    )
+    func(paint(f"[#white]{action} [#blue]{serie} [#magenta]{season}x{episode}"))
 
 
 def download(action):
     serie_list = [list(serie.values()) for serie in CONFIG.get("serie")]
     for name, url, folder, lang, mode in serie_list:
-        SPINNER.start(f"Scanning {paint(name,Color.BLUE)}")
+        SPINNER.start(paint(f"Scanning [#blue]{name}"))
         eurostreaming_url = path.join(get_eurostreaming_site(), url)
         page = LinkFinder(eurostreaming_url, sub=lang == "eng")
         eps_to_download = episodes_to_download(folder, page, mode)
@@ -159,7 +162,7 @@ def main():
             download(args.action[0])
     except KeyboardInterrupt:
         SPINNER.stop()
-        print(f"{paint('Interrupted!',Color.RED)} Saving...")
+        ppaint("[#red]Interrupted![/] Saving...")
 
 
 if __name__ == "__main__":

@@ -3,12 +3,11 @@ from json import dump, load
 from os import path, walk
 from re import search
 
-from colorifix.colorifix import Background, Color, Style, erase, paint
+from colorifix.colorifix import erase, paint, ppaint
 from europlexo.seriesfinder import get_suggestion_list
 from halo import Halo
 from pymortafix.utils import direct_input, multisub, strict_input
 from requests import get
-from requests.exceptions import ConnectionError, MissingSchema
 from telegram import Bot
 from telegram.error import InvalidToken
 
@@ -46,7 +45,7 @@ def add_serie(name, link, folder, lang, mode):
 
 def add_new_path(path):
     config = get_config()
-    config["path"] = path
+    config["path"] = path.strip()
     save_config(config)
 
 
@@ -79,12 +78,12 @@ def add_eurostreaming_site(es_url):
 
 def pprint_row(serie_name, lang, mode, index=False, remove=False):
     if index and remove:
-        return paint(f"[#] {serie_name} [{mode}]", background=Background.RED)
+        return paint(f"[!red][#] {serie_name} [{mode}]")
     if index and not remove:
-        ret_str = paint("[>] ", Color.GREEN) + paint(serie_name, Color.GREEN)
+        ret_str = paint(f"[#green][>] {serie_name}")
     else:
-        ret_str = "[ ] " + paint(serie_name)
-    return ret_str + paint(f" ({lang}) ", Color.CYAN) + paint(f"[{mode}]", Color.BLUE)
+        ret_str = f"[ ] {serie_name}"
+    return ret_str + paint(f" [#cyan]({lang}) [#blue][{mode}]")
 
 
 def pprint_serie(serie_list, index, remove=None):
@@ -129,7 +128,7 @@ def pprint_actions(mode=None):
         "-" * sum(len(action) + 5 for action in actions.values())
         + "\n"
         + " ".join(
-            f"[{paint(key,style=Style.BOLD)}]:{paint(action,Color.MAGENTA)}"
+            paint(f"[[@bold]{key}[/@]]:[#magenta]{action}")
             for key, action in actions.items()
         )
     )
@@ -137,7 +136,7 @@ def pprint_actions(mode=None):
 
 def pprint_query(query_list, selected):
     return "\n".join(
-        paint(f"[>] {name}", Color.GREEN) if selected == i else f"[ ] {name}"
+        paint(f"[#green][>] {name}") if selected == i else f"[ ] {name}"
         for i, (name, _) in enumerate(query_list)
     )
 
@@ -145,23 +144,18 @@ def pprint_query(query_list, selected):
 def pprint_settings():
     config = get_config()
     labels = ("Eurostreaming", "Current path", "Backup", "Telegram", "Youtube-dl")
-    eurostreaming_url = paint(config.get("eurostreaming"), Color.BLUE)
-    path_str = paint(config.get("path"), Color.BLUE)
-    backup = get_last_backup()
-    backup_str = paint(backup, Color.BLUE)
+    eurostreaming_url = f"[#blue]{config.get('eurostreaming')}"
+    path_str = f"[#blue]{config.get('path')}"
+    backup_str = f"[#blue]{get_last_backup()}"
     telegram_str = (
-        (
-            paint(config.get("telegram-bot-token"), Color.BLUE)
-            + paint(":", style=Style.BOLD)
-            + paint(config.get("telegram-chat-id"), Color.BLUE)
-        )
-        if config.get("telegram-bot-token")
-        else ""
+        f"[#blue]{config.get('telegram-bot-token')}[/# @bold]:"
+        f"[/@ #blue]{config.get('telegram-chat-id')}"
     )
-    youtube_dl_str = paint(config.get("youtube-dl-path"), Color.BLUE)
+    telegram_str = config.get("telegram-bot-token") and telegram_str or ""
+    youtube_dl_str = f"[#blue]{config.get('youtube-dl-path')}"
     values = (eurostreaming_url, path_str, backup_str, telegram_str, youtube_dl_str)
     return "\n".join(
-        f"{paint(lab,style=Style.BOLD)}: {val}" for lab, val in zip(labels, values)
+        paint(f"[@bold]{lab}[/]: {val}") for lab, val in zip(labels, values)
     )
 
 
@@ -175,12 +169,9 @@ def get_last_backup():
 
 
 def recap_new_serie(name, url, folder, lang, mode):
-    return (
-        f"Name: {paint(name,Color.BLUE)}\n"
-        f"Link: {paint(url,Color.BLUE)}\n"
-        f"Folder: {paint(folder,Color.BLUE)}\n"
-        f"Language: {paint(lang,Color.BLUE)}\n"
-        f"Mode: {paint(mode,Color.BLUE)}"
+    return paint(
+        f"Name: [#blue]{name}[/]\nLink: [#blue]{url}[/]\nFolder: [#blue]{folder}[/]\n"
+        f"Language: [#blue]{lang}[/]\nMode: [#blue]{mode}",
     )
 
 
@@ -234,11 +225,11 @@ def manage(eurostreaming_url):
                 e_k = direct_input(choices=("u", "r", "p", "t", "y", "e", "b"))
                 erase(7)
                 if e_k == "p":
-                    base = paint("Path", style=Style.BOLD) + ": "
+                    base = paint("[@bold]Path[/]: ")
                     new_path = strict_input(
                         base,
-                        wrong_text=paint("Wrong path! ", Color.RED) + base,
-                        check=path.exists,
+                        wrong_text=paint(f"[#red]Wrong path![/] {base}"),
+                        check=lambda x: path.exists(x.strip()),
                         flush=True,
                     )
                     add_new_path(new_path)
@@ -257,39 +248,37 @@ def manage(eurostreaming_url):
                         indent=4,
                     )
                 elif e_k == "t":
-                    base = paint("Telegram bot token", style=Style.BOLD) + ": "
+                    base = paint("[@bold]Telegram bot token[/]: ")
                     telegram_bot_token = strict_input(
                         base,
-                        wrong_text=paint("Invalid token! ", Color.RED) + base,
+                        wrong_text=paint(f"[#red]Invalid token! {base}"),
                         check=is_bot_valid,
                         flush=True,
                     )
-                    base = paint("Telegram chat ID", style=Style.BOLD) + ": "
+                    base = paint("[@bold]Telegram chat ID[/]: ")
                     telegram_chat_id = strict_input(
                         base,
-                        wrong_text=paint("Invalid chat ID! ", Color.RED) + base,
+                        wrong_text=paint(f"[#red]Invalid chat ID![/] {base}"),
                         regex=r"\-?\d+$",
                         flush=True,
                     )
                     add_telegram_config(telegram_bot_token, telegram_chat_id)
                 elif e_k == "y":
-                    base = paint("Youtube-dl path", style=Style.BOLD) + ": "
+                    base = paint("[@bold]Youtube-dl path[/]: ")
                     youtube_dl_path = strict_input(
                         base,
                         wrong_text=paint(
-                            "Wrong path, MUST include 'youtube-dl'! ", Color.RED
-                        )
-                        + base,
+                            f"[#red]Wrong path, MUST include 'Youtube-dl'![/] {base}"
+                        ),
                         check=is_yt_download_valid,
                         flush=True,
                     )
                     add_youtube_dl(youtube_dl_path)
                 elif e_k == "e":
-                    base = paint("Eurostreaming site", style=Style.BOLD) + ": "
+                    base = paint("[@bold]Eurostreaming site[/]: ")
                     eurostreaming_url = strict_input(
                         base,
-                        wrong_text=paint("Wrong site, unreacheable! ", Color.RED)
-                        + base,
+                        wrong_text=paint(f"[#red]Wrong site, unreacheable![/] {base}"),
                         check=is_eurostreaming_valid,
                         flush=True,
                     )
@@ -308,13 +297,13 @@ def manage(eurostreaming_url):
             q_index = 0
             q_k = "start"
             # serie search
-            query = input(paint("Serie name", style=Style.BOLD) + ": ")
+            query = input(paint("[@bold]Serie name[/]: "))
             erase()
-            SPINNER.start(f"Searching for {paint(query,Color.BLUE)}")
+            SPINNER.start(paint(f"Searching for [#blue]{query}"))
             query_list = get_suggestion_list(eurostreaming_url, query)
             SPINNER.stop()
             if not query_list:
-                print(f"No serie found with {paint(query,Color.BLUE)}!")
+                ppaint(f"No serie found with [#blue]{query}")
                 print(pprint_actions(mode="back"))
                 q_k = direct_input(choices=("b",))
                 erase(3)
@@ -330,24 +319,24 @@ def manage(eurostreaming_url):
                         q_index += 1
             # new serie
             if q_k == "c":
-                base = paint("Folder name", style=Style.BOLD) + ": "
+                base = paint("[@bold]Folder name[/]: ")
                 folder = strict_input(
                     base,
-                    f"{paint('Folder name must be unique!', Color.RED)} {base}",
+                    paint(f"[#red]Folder name must be unique![/] {base}"),
                     check=is_folder_unique,
                     flush=True,
                 )
-                base = paint("Language [eng|ita]", style=Style.BOLD) + ": "
+                base = paint("[@bold]Language [eng|ita][/]: ")
                 lang = strict_input(
                     base,
-                    f"{paint('Wrong language!',Color.RED)} {base}",
+                    paint(f"[#red]Language must be 'eng' or 'ita'![/] {base}"),
                     choices=("eng", "ita"),
                     flush=True,
                 )
-                base = paint("Mode [full|new|last]", style=Style.BOLD) + ": "
+                base = paint("[@bold]Mode [full|new|last][/]: ")
                 mode = strict_input(
                     base,
-                    f"{paint('Mode must be full, new or last!', Color.RED)} {base}",
+                    paint(f"[#red]Mode must be 'full', 'new' or 'last'![/] {base}"),
                     choices=("full", "new", "last"),
                     flush=True,
                 )
